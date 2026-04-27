@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-//@Profile(value = "local")
+@Profile({"local", "dev"})
 @RestController
 @RequestMapping("/v1/test")
 @RequiredArgsConstructor
