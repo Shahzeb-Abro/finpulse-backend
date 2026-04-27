@@ -35,11 +35,12 @@ public class UserPrincipal implements UserDetails, OAuth2User, OidcUser {
     private String fullName;
     private String avatarUrl;
     private boolean accountLocked;
+    private Boolean emailVerified;
     private Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
 
     public UserPrincipal(Long id, String email, String password, String fullName,
-                         String avatarUrl, boolean accountLocked,
+                         String avatarUrl, boolean accountLocked, Boolean emailVerified,
                          Collection<? extends GrantedAuthority> authorities,
                          Map<String, Object> attributes) {
         this.id = id;
@@ -48,6 +49,7 @@ public class UserPrincipal implements UserDetails, OAuth2User, OidcUser {
         this.fullName = fullName;
         this.avatarUrl = avatarUrl;
         this.accountLocked = accountLocked;
+        this.emailVerified = emailVerified;
         this.authorities = authorities;
         this.attributes = attributes;
     }
@@ -65,6 +67,7 @@ public class UserPrincipal implements UserDetails, OAuth2User, OidcUser {
                 user.getFullName(),
                 user.getAvatarUrl(),
                 user.getAccountLocked(),
+                user.getEmailVerified(),
                 authorities,
                 null
         );
@@ -97,4 +100,9 @@ public class UserPrincipal implements UserDetails, OAuth2User, OidcUser {
     @Override public Map<String, Object> getClaims() { return attributes; }
     @Override public OidcUserInfo getUserInfo() { return null; }
     @Override public OidcIdToken getIdToken() { return null; }
+
+    @Override
+    public Boolean getEmailVerified() {  // 👈 override OidcUser's implementation
+        return emailVerified != null ? emailVerified : false;
+    }
 }

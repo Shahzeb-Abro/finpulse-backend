@@ -28,4 +28,5 @@ public class AuthResponse {
     private AuthProvider authProvider;
     private Set<String> roles;
     private String message;
+    private Boolean isEmailVerified = Boolean.FALSE;
 }
