@@ -33,3 +33,4 @@ logs/
 
 # Secrets (safety net)
 application-secrets.properties
+application-local.properties

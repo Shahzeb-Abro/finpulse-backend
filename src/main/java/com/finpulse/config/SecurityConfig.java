@@ -146,6 +146,7 @@ public class SecurityConfig {
                 // NEVER create HTTP sessions. Every request must authenticate via JWT.
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(ctx -> ctx.requireExplicitSave(false))
 
                 // ── 3. CUSTOM ENTRY POINT ───────────────────────────
                 // When an unauthenticated user hits a protected endpoint,
