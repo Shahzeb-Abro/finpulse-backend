@@ -17,3 +17,5 @@ spring:
 app:
   mail:
     from: noreply@finpulse.app
+  frontend:
+    url: http://localhost:5173

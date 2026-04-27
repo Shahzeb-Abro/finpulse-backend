@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -49,6 +50,9 @@ public class User {
      */
     @Column(length = 255)
     private String password;
+
+    @Column(nullable = false)
+    private Instant passwordChangedAt;
 
     @Column(length = 512)
     private String avatarUrl;
