@@ -1,12 +1,15 @@
 package com.finpulse.controller;
 
 import com.finpulse.config.security.UserPrincipal;
+import com.finpulse.dto.request.ForgotPasswordRequest;
 import com.finpulse.dto.request.LoginRequest;
 import com.finpulse.dto.request.RegisterRequest;
+import com.finpulse.dto.request.ResetPasswordRequest;
 import com.finpulse.dto.response.ApiResponse;
 import com.finpulse.dto.response.AuthResponse;
 import com.finpulse.exception.AuthenticationException;
 import com.finpulse.service.AuthService;
+import com.finpulse.service.PasswordResetService;
 import com.finpulse.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -52,6 +55,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     /**
      * POST /v1/auth/register
@@ -192,5 +196,68 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success("User retrieved", authResponse));
+    }
+
+    /**
+     * POST /v1/auth/forgot-password
+     *
+     * Initiates a password reset flow.
+     *
+     * SECURITY NOTE: Always returns the same response whether the email
+     * exists or not. This prevents email enumeration attacks where an
+     * attacker probes the system to discover which emails are registered.
+     *
+     * If the email exists:
+     *   1. Invalidate any prior unused reset tokens for this user
+     *   2. Generate a cryptographically random token (256 bits)
+     *   3. Store its SHA-256 hash with a 30-minute expiry
+     *   4. Email the raw token as a link to the user
+     *
+     * If the email doesn't exist: silently do nothing.
+     *
+     * Request body:
+     * {
+     *   "email": "john@example.com"
+     * }
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest) {
+
+        passwordResetService.requestReset(request, httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "If an account exists for that email, a reset link has been sent."
+        ));
+    }
+
+    /**
+     * POST /v1/auth/reset-password
+     *
+     * Completes a password reset using a token from the email link.
+     *
+     * Flow:
+     *   1. Validate token (exists, not expired, not used)
+     *   2. Hash and update the user's password
+     *   3. Mark token as used (single-use)
+     *   4. Invalidate all existing refresh tokens (force re-login on all devices)
+     *   5. Send confirmation email — critical for catching account takeover
+     *
+     * Request body:
+     * {
+     *   "token": "abc123...",
+     *   "newPassword": "MyNewSecureP@ss123"
+     * }
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        passwordResetService.resetPassword(request);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Password updated successfully. Please log in with your new password."
+        ));
     }
 }

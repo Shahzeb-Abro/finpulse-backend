@@ -54,4 +54,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.refreshTokenHash = null WHERE u.id = :userId")
     void clearRefreshToken(@Param("userId") Long userId);
+
+    Optional<User> findByEmailIgnoreCase(String email);
 }
