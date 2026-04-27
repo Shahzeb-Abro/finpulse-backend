@@ -19,3 +19,5 @@ app:
     from: noreply@finpulse.app
   frontend:
     url: http://localhost:5173
+  backend:
+    url: http://localhost:8383

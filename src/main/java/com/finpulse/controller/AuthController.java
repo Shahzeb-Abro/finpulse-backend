@@ -8,6 +8,7 @@ import com.finpulse.dto.request.ResetPasswordRequest;
 import com.finpulse.dto.response.ApiResponse;
 import com.finpulse.dto.response.AuthResponse;
 import com.finpulse.exception.AuthenticationException;
+import com.finpulse.exception.InvalidVerificationTokenException;
 import com.finpulse.service.AuthService;
 import com.finpulse.service.PasswordResetService;
 import com.finpulse.util.CookieUtil;
@@ -16,10 +17,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Authentication Controller — the PUBLIC FACE of our auth system.
@@ -56,6 +62,9 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+
+    @Value( "${app.frontend.url}")
+    private String frontendUrl;
 
     /**
      * POST /v1/auth/register
@@ -189,6 +198,7 @@ public class AuthController {
                 .fullName(userPrincipal.getFullName())
                 .email(userPrincipal.getEmail())
                 .avatarUrl(userPrincipal.getAvatarUrl())
+                .isEmailVerified(userPrincipal.getEmailVerified())
                 .roles(userPrincipal.getAuthorities().stream()
                         .map(a -> a.getAuthority())
                         .collect(java.util.stream.Collectors.toSet()))
@@ -258,6 +268,51 @@ public class AuthController {
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Password updated successfully. Please log in with your new password."
+        ));
+    }
+
+    /**
+     * GET /v1/auth/verify-email?token=xxx
+     *
+     * Called when user clicks the link in their verification email.
+     * Validates the token, marks the user as verified, then redirects
+     * to the frontend so the user lands on a proper page — not a raw JSON response.
+     *
+     * Uses redirect instead of JSON because this endpoint is opened
+     * directly in a browser from an email link, not called by the React app.
+     */
+    @GetMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(
+            @RequestParam String token,
+            HttpServletResponse response) throws IOException {
+
+        try {
+            authService.verifyEmail(token);
+            // Redirect to frontend success page
+            response.sendRedirect(frontendUrl + "/login?verified=true");
+        } catch (InvalidVerificationTokenException e) {
+            // Redirect to frontend error page with reason
+            response.sendRedirect(frontendUrl + "/login?verified=false&reason=" +
+                    URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
+        }
+
+        return ResponseEntity.status(HttpStatus.FOUND).build();
+    }
+
+    /**
+     * POST /v1/auth/resend-verification
+     *
+     * Authenticated endpoint — user must be logged in but unverified.
+     * Invalidates old token, generates a new one, sends fresh email.
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<Void>> resendVerification(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        authService.resendVerificationEmail(userPrincipal.getId());
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Verification email sent. Please check your inbox."
         ));
     }
 }

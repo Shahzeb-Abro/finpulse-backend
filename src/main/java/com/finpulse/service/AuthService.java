@@ -11,10 +11,12 @@ import com.finpulse.exception.AuthenticationException;
 import com.finpulse.exception.ResourceAlreadyExistsException;
 import com.finpulse.repository.UserRepository;
 import com.finpulse.util.CookieUtil;
+import com.finpulse.util.EmailService;
 import com.finpulse.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,12 +25,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -73,6 +78,14 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
+    private final EmailVerificationTokenService emailVerificationTokenService;
+    private final EmailService emailService;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
+    @Value("${app.backend.url}")
+    private String applicationUrl;
 
     // ═══════════════════════════════════════════════════════════
     //  REGISTER
@@ -106,10 +119,24 @@ public class AuthService {
                 .emailVerified(false)
                 .roles(new HashSet<>(Set.of(Role.ROLE_USER)))
                 .lastLoginAt(LocalDateTime.now())
+                .passwordChangedAt(Instant.now())
                 .build();
 
         user = userRepository.save(user);
         log.info("New user registered: {}", user.getEmail());
+
+        String rawToken = emailVerificationTokenService.createTokenFor(user);
+        String verifyLink = applicationUrl + "/api/v1/auth/verify-email?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+
+        emailService.sendTemplatedEmail(
+                user.getEmail(),
+                "EMAIL_VERIFICATION",
+                Map.of(
+                        "name", user.getFullName(),
+                        "verifyLink", verifyLink,
+                        "expiresInHours", 24
+                )
+        );
 
         // Generate tokens and set cookies
         return authenticateAndRespond(user, response, "Registration successful");
@@ -278,6 +305,7 @@ public class AuthService {
                 .authProvider(user.getAuthProvider())
                 .roles(roles)
                 .message(message)
+                .isEmailVerified(user.getEmailVerified())
                 .build();
     }
 
@@ -303,5 +331,45 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 algorithm not available", e);
         }
+    }
+
+    @Transactional
+    public void verifyEmail(String token) {
+        User user = emailVerificationTokenService.consumeToken(token);
+
+        if (user.getEmailVerified() == true) {
+            return;
+        }
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        log.info("Email verified for user: {}", user.getEmail());
+    }
+
+    public void resendVerificationEmail(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new AuthenticationException("User not found"));
+
+        if (user.getEmailVerified() == true) {
+            throw new IllegalStateException("Email is already verified");
+        }
+
+        if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+            throw new IllegalStateException("Cannot resend verification email for Google accounts");
+        }
+
+        String rawToken = emailVerificationTokenService.createTokenFor(user);
+        String verifyLink = applicationUrl + "/api/v1/auth/verify-email?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+
+        emailService.sendTemplatedEmail(
+                user.getEmail(),
+                "EMAIL_VERIFICATION",
+                Map.of(
+                        "name", user.getFullName(),
+                        "verifyLink", verifyLink,
+                        "expiresInHours", 24
+                )
+        );
+
+        log.info("Verification email resent for user: {}", user.getEmail());
     }
 }
