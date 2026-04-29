@@ -6,7 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "TRANSACTIONS")
@@ -22,7 +22,7 @@ public class Transaction extends Auditable {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "transaction_category_id")
     private Lookup category;
 
     private BigDecimal amount = BigDecimal.ZERO;
@@ -32,8 +32,7 @@ public class Transaction extends Auditable {
     @Enumerated(EnumType.STRING)
     private TransactionType transactionType;
 
-    private String receiverName;
-    private Date transactionDate;
+    private LocalDate transactionDate;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

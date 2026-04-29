@@ -21,7 +21,6 @@ public class TransactionMapper {
         dto.setAmount(domain.getAmount());
         dto.setTransactionType(domain.getTransactionType().name());
         dto.setTransactionDate(domain.getTransactionDate());
-        dto.setReceiverName(domain.getReceiverName());
 
         return dto;
     }
