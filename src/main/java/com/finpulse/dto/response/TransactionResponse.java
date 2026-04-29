@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Data
@@ -20,6 +21,6 @@ public class TransactionResponse {
     private String categoryVisibleValue;
     private String receiverName;
     private String transactionType;
-    private Date transactionDate;
+    private LocalDate transactionDate;
     private BigDecimal amount = BigDecimal.ZERO;
 }

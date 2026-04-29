@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -19,11 +19,10 @@ public class TransactionRequest {
 
     @NotNull(message = "Category is required")
     private Long categoryId;
-    private String receiverName;
 
     @NotNull(message = "Transaction type is required")
     private TransactionType transactionType;
-    private Date transactionDate;
+    private LocalDate transactionDate;
 
     @NotNull(message = "Amount is required")
     private BigDecimal amount = BigDecimal.ZERO;

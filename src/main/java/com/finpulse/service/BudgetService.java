@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import com.finpulse.enums.LookupTypeEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -215,7 +216,7 @@ public class BudgetService {
         }
 
         BigDecimal remainingSpend = budget.getRemainingSpend();
-        if (TransactionType.DEPOSIT.name().equals(dto.getTransactionType().name()) && dto.getAmount().compareTo(remainingSpend) > 0) {
+        if (TransactionType.INCOME.name().equals(dto.getTransactionType().name()) && dto.getAmount().compareTo(remainingSpend) > 0) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Amount exceeds remaining spend"));
         }
 
@@ -224,8 +225,7 @@ public class BudgetService {
                 .description(dto.getDescription())
                 .amount(dto.getAmount())
                 .transactionType(dto.getTransactionType())
-                .transactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : new Date())
-                .receiverName(dto.getReceiverName())
+                .transactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDate.now())
                 .category(category)
                 .activeFlag(Boolean.TRUE)
                 .build();
