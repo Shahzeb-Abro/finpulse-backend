@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "BUDGETS")
@@ -25,9 +26,16 @@ public class Budget extends Auditable {
     @JoinColumn(name = "budget_theme_id")
     private Lookup budgetTheme;
 
+    @ManyToOne
+    @JoinColumn(name = "budget_period_id")
+    private Lookup budgetPeriod;
+
     private BigDecimal maximumSpend = BigDecimal.ZERO;
     private BigDecimal currentSpend = BigDecimal.ZERO;
     private BigDecimal remainingSpend = BigDecimal.ZERO;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -18,6 +19,11 @@ public class BudgetResponse {
     private Long budgetThemeId;
     private String budgetThemeVisibleValue;
     private String budgetThemeLookupValue;
+    private Long budgetPeriodId;
+    private String budgetPeriodVisibleValue;
+    private String budgetPeriodLookupValue;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private BigDecimal maximumSpend = BigDecimal.ZERO;
     private BigDecimal currentSpend = BigDecimal.ZERO;
     private BigDecimal remainingSpend = BigDecimal.ZERO;
