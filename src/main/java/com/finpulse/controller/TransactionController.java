@@ -8,10 +8,13 @@ import com.finpulse.dto.response.ApiResponse;
 import com.finpulse.dto.response.PagedResponse;
 import com.finpulse.dto.response.TransactionResponse;
 import com.finpulse.entity.Lookup;
+import com.finpulse.entity.Transaction;
 import com.finpulse.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -54,6 +57,11 @@ public class TransactionController {
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<ApiResponse<Void>> deleteTransaction(@PathVariable("transactionId") Long transactionId) {
         return transactionService.deleteTransaction(transactionId);
+    }
+
+    @GetMapping("/export/pdf")
+    public ResponseEntity<byte[]> exportPdf(@RequestParam(value = "search", required = false) String search, @RequestParam(value = "wildSearch", required = false) String wildSearch) {
+        return transactionService.exportPdfTransactions(search, wildSearch);
     }
 
 }

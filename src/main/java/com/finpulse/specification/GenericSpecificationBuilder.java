@@ -12,6 +12,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -267,6 +268,9 @@ public class GenericSpecificationBuilder {
             }
             if (targetType.isEnum()) {
                 return Enum.valueOf((Class<Enum>) targetType, rawValue.toUpperCase());
+            }
+            if (targetType.equals(LocalDate.class)) {
+                return LocalDate.parse(rawValue); // parses "2026-04-28" natively
             }
             if (Date.class.isAssignableFrom(targetType)) {
                 return parseDate(rawValue);
