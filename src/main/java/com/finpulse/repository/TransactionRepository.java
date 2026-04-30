@@ -8,8 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
@@ -21,4 +23,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Transaction findByIdAndUser(Long transactionId, User user);
 
     List<Transaction> findTop3ByCategoryAndUserOrderByCreatedDateDesc(Lookup category, User user);
+
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.category = :category AND t.user = :user")
+    BigDecimal findTotalAmountByCategoryAndUser(Lookup category, User user);
 }

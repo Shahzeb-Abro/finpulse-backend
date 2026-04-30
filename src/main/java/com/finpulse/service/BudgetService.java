@@ -72,6 +72,7 @@ public class BudgetService {
 
         Lookup budgetTheme = lookupRepository.findById(dto.getBudgetThemeId()).orElseThrow();
         Lookup budgetCategory = lookupRepository.findById(dto.getBudgetCategoryId()).orElseThrow();
+        Lookup budgetPeriod = lookupRepository.findById(dto.getBudgetPeriodId()).orElseThrow();
         boolean budgetAlreadyExistsByCategory = budgetRepository.existsByBudgetCategoryAndUser(budgetCategory, loggedInUser);
         boolean budgetAlreadyExistsByTheme = budgetRepository.existsByBudgetThemeAndUser(budgetTheme, loggedInUser);
 
@@ -86,6 +87,9 @@ public class BudgetService {
         budget.setBudgetTheme(budgetTheme);
         budget.setBudgetCategory(budgetCategory);
         budget.setMaximumSpend(dto.getMaximumSpend());
+        budget.setStartDate(dto.getStartDate());
+        budget.setEndDate(dto.getEndDate());
+        budget.setBudgetPeriod(budgetPeriod);
         budgetRepository.save(budget);
 
         return ResponseEntity.ok(ApiResponse.success("Budget updated successfully", budgetMapper.mapBudgetDomainToResponseDto(budget)));
@@ -108,6 +112,7 @@ public class BudgetService {
         User currentUser = securityUtils.getCurrentUser();
         Lookup budgetTheme = lookupRepository.findById(dto.getBudgetThemeId()).orElseThrow();
         Lookup budgetCategory = lookupRepository.findById(dto.getBudgetCategoryId()).orElseThrow();
+        Lookup budgetPeriod = lookupRepository.findById(dto.getBudgetPeriodId()).orElseThrow();
         boolean budgetAlreadyExistsWithCategory = budgetRepository.existsByBudgetCategoryAndUser(budgetCategory, currentUser);
         boolean budgetAlreadyExistsWithTheme = budgetRepository.existsByBudgetThemeAndUser(budgetTheme, currentUser);
 
@@ -126,6 +131,9 @@ public class BudgetService {
                 .maximumSpend(dto.getMaximumSpend())
                 .currentSpend(BigDecimal.ZERO)
                 .remainingSpend(dto.getMaximumSpend())
+                .startDate(dto.getStartDate())
+                .endDate(dto.getEndDate())
+                .budgetPeriod(budgetPeriod)
                 .build();
 
         budgetRepository.save(newBudget);
@@ -147,10 +155,14 @@ public class BudgetService {
         budgets.forEach(budget -> {
             BigDecimal prevTotalMaximumSpend = budgetSummaryGraph.getTotalMaximumSpend();
             BigDecimal prevTotalCurrentSpend = budgetSummaryGraph.getTotalCurrentSpend();
-            budgetSummaryGraph.setTotalMaximumSpend(prevTotalMaximumSpend.add(budget.getMaximumSpend()));
-            budgetSummaryGraph.setTotalCurrentSpend(prevTotalCurrentSpend.add(budget.getCurrentSpend()));
 
-            BudgetSummaryItem summaryItem = budgetMapper.mapDomainToBudgetSummaryItemDto(budget);
+            Lookup budgetCategory = budget.getBudgetCategory();
+            Lookup transactionCategory = lookupRepository.findByLookupTypeAndLookupValue(LookupTypeEnum.TRANSACTION_CATEGORY.name(), budgetCategory.getLookupValue()).orElse(null);
+            BigDecimal currentSpend = transactionRepository.findTotalAmountByCategoryAndUser(transactionCategory, budget.getUser());
+            budgetSummaryGraph.setTotalMaximumSpend(prevTotalMaximumSpend.add(budget.getMaximumSpend()));
+            budgetSummaryGraph.setTotalCurrentSpend(prevTotalCurrentSpend.add(currentSpend));
+
+            BudgetSummaryItem summaryItem = budgetMapper.mapDomainToBudgetSummaryItemDto(budget, currentSpend);
             summaryItems.add(summaryItem);
         });
 
