@@ -21,9 +21,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +39,7 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final TransactionRepository transactionRepository;
     private final LookupRepository lookupRepository;
+    private final TransactionPdfService transactionPdfService;
 
     public ResponseEntity<ApiResponse<TransactionResponse>> addTransaction(TransactionRequest dto) {
         User loggedInUser = securityUtils.getCurrentUser();
@@ -135,5 +141,42 @@ public class TransactionService {
         transaction.setActiveFlag(Boolean.FALSE);
         transactionRepository.save(transaction);
         return ResponseEntity.ok().body(ApiResponse.success("Transaction deleted successfully"));
+    }
+
+    public ResponseEntity<byte[]> exportPdfTransactions(String search, String wildSearch) {
+        User user = securityUtils.getCurrentUser();
+
+        // Build spec with same filters as the table — no pagination
+        Specification<Transaction> spec = GenericSpecificationBuilder.build(
+                Transaction.class,
+                user,
+                search,
+                wildSearch
+        );
+
+        // Fetch ALL matching transactions sorted by date
+        List<Transaction> transactions = transactionRepository.findAll(
+                spec,
+                Sort.by(Sort.Direction.DESC, "transactionDate")
+        );
+
+        // Derive date range from the actual results for the PDF header
+        LocalDate from = transactions.isEmpty()
+                ? LocalDate.now().minusMonths(1)
+                : transactions.get(transactions.size() - 1).getTransactionDate();
+        LocalDate to = transactions.isEmpty()
+                ? LocalDate.now()
+                : transactions.get(0).getTransactionDate();
+
+        byte[] pdf = transactionPdfService.generateTransactionPdf(transactions, user, from, to);
+
+        String fileName = "finpulse-transactions-" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }
