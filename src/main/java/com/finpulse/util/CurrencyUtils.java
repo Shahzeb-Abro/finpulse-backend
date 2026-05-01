@@ -11,8 +11,8 @@ public class CurrencyUtils {
             case "GBP" -> "£";
             case "EUR" -> "€";
             case "PKR" -> "₨";
-            case "AED" -> "د.إ";
-            case "SAR" -> "﷼";
+            case "AED" -> "AED";
+            case "SAR" -> "SAR";
             default    -> "$";
         };
     }
