@@ -17,6 +17,7 @@ import com.finpulse.repository.LookupRepository;
 import com.finpulse.repository.TransactionRepository;
 import com.finpulse.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.finpulse.enums.LookupTypeEnum;
@@ -28,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BudgetService {
@@ -160,7 +162,7 @@ public class BudgetService {
             Lookup transactionCategory = lookupRepository.findByLookupTypeAndLookupValue(LookupTypeEnum.TRANSACTION_CATEGORY.name(), budgetCategory.getLookupValue()).orElse(null);
             BigDecimal currentSpend = transactionRepository.findTotalAmountByCategoryAndUser(transactionCategory, budget.getUser());
             budgetSummaryGraph.setTotalMaximumSpend(prevTotalMaximumSpend.add(budget.getMaximumSpend()));
-            budgetSummaryGraph.setTotalCurrentSpend(prevTotalCurrentSpend.add(currentSpend));
+            budgetSummaryGraph.setTotalCurrentSpend(prevTotalCurrentSpend.add(currentSpend != null ? currentSpend : BigDecimal.ZERO));
 
             BudgetSummaryItem summaryItem = budgetMapper.mapDomainToBudgetSummaryItemDto(budget, currentSpend);
             summaryItems.add(summaryItem);
@@ -250,4 +252,4 @@ public class BudgetService {
 
         return ResponseEntity.status(201).body(ApiResponse.success("Transaction added successfully", budgetMapper.mapBudgetTransactionDomainToResponseDto(budget, List.of(newTransaction))));
     }
- }
+}

@@ -3,6 +3,7 @@ package com.finpulse.util.pdf;
 import com.itextpdf.io.font.FontProgramFactory;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -12,12 +13,13 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.BorderRadius;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -54,7 +56,7 @@ public class PDFHelperUtils {
     public static final Color RED = new DeviceRgb(201, 71, 54);    // destructive
     public static final Color GREY_BEIGE = new DeviceRgb(151, 144, 136);  // #979088
 
-    // ─── With these ───────────────────────────────────────────────
+     // ─── With these ───────────────────────────────────────────────
     static {
         FontProgramFactory.registerFont(
                 PDFHelperUtils.class.getClassLoader()
@@ -66,12 +68,37 @@ public class PDFHelperUtils {
                         .getResource("fonts/PublicSans-Bold.ttf").getPath(),
                 "PublicSans-Bold"
         );
+
+         FontProgramFactory.registerFont(
+                 PDFHelperUtils.class.getClassLoader()
+                         .getResource("fonts/NotoSans-Regular.ttf").getPath(),
+                 "NotoSans-Regular"
+         );
+
+         FontProgramFactory.registerFont(
+                 PDFHelperUtils.class.getClassLoader()
+                         .getResource("fonts/NotoSans-Bold.ttf").getPath(),
+                 "NotoSans-Bold"
+         );
+
+
     }
 
     public static PdfFont regular() {
         try {
             return PdfFontFactory.createRegisteredFont(
                     "PublicSans-Regular", "Identity-H",
+                    PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED
+            );
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create regular font", e);
+        }
+    }
+
+    public static PdfFont notoRegular() {
+        try {
+            return PdfFontFactory.createRegisteredFont(
+                    "NotoSans-Regular", "Identity-H",
                     PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED
             );
         } catch (IOException e) {
@@ -90,12 +117,23 @@ public class PDFHelperUtils {
         }
     }
 
+    public static PdfFont notoBold() {
+        try {
+            return PdfFontFactory.createRegisteredFont(
+                    "NotoSans-Bold", "Identity-H",
+                    PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED
+            );
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create bold font", e);
+        }
+    }
+
     // ─── Hero header ─────────────────────────────────────────────
     public static Div heroHeader(String label, String title, String subtitle) {
         Div hero = new Div()
                 .setBackgroundColor(DARK)
                 .setPadding(24)
-                .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(8))
+                .setBorderRadius(new BorderRadius(8))
                 .setMarginBottom(16);
 
         // Small uppercase label (green accent)
@@ -133,7 +171,7 @@ public class PDFHelperUtils {
         return new Div()
                 .setBackgroundColor(WHITE)
                 .setPadding(20)
-                .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(12))
+                .setBorderRadius(new BorderRadius(12))
                 .setMarginBottom(12);
     }
 
@@ -142,7 +180,7 @@ public class PDFHelperUtils {
         Div callout = new Div()
                 .setBackgroundColor(BG_BEIGE)
                 .setPadding(16)
-                .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(8))
+                .setBorderRadius(new BorderRadius(8))
                 .setBorderLeft(new SolidBorder(GREEN, 3));
 
         callout.add(new Paragraph(label)
@@ -162,22 +200,27 @@ public class PDFHelperUtils {
 
     // ─── 3-column summary row (income / expense / net) ───────────
     public static Table summaryRow(
-            String incomeLabel, String incomeValue,
-            String expenseLabel, String expenseValue,
-            String netLabel, String netValue, boolean netIsPositive
+            String incomeLabel,   String incomeSymbol,  String incomeAmount,
+            String expenseLabel,  String expenseSymbol, String expenseAmount,
+            String netLabel,      String netSymbol,     String netAmount,
+            boolean netIsPositive
     ) {
         Table summary = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(0);
 
-        summary.addCell(summaryCell(incomeLabel, incomeValue, GREEN));
-        summary.addCell(summaryCell(expenseLabel, expenseValue, RED));
-        summary.addCell(summaryCell(netLabel, netValue, netIsPositive ? GREEN : RED));
+        summary.addCell(summaryCell(incomeLabel,  "+", incomeSymbol,  incomeAmount,  GREEN));
+        summary.addCell(summaryCell(expenseLabel, "-", expenseSymbol, expenseAmount, RED));
+        summary.addCell(summaryCell(netLabel,
+                netIsPositive ? "+" : "-", netSymbol, netAmount,
+                netIsPositive ? GREEN : RED));
 
         return summary;
     }
 
-    private static Cell summaryCell(String label, String value, Color valueColor) {
+    private static Cell summaryCell(
+            String label, String sign, String symbol, String amount, Color valueColor
+    ) {
         Cell cell = new Cell()
                 .setBackgroundColor(BG_BEIGE)
                 .setPadding(12)
@@ -191,12 +234,15 @@ public class PDFHelperUtils {
                 .setMarginBottom(4)
                 .setCharacterSpacing(0.4f));
 
-        cell.add(new Paragraph(value)
+        // Mixed font paragraph — sign + symbol in Noto, amount in Public Sans Bold
+        Paragraph valueParagraph = new Paragraph()
+                .add(new Text(sign).setFont(notoBold()).setFontColor(valueColor))
+                .add(new Text(symbol + " ").setFont(notoBold()).setFontColor(valueColor))
+                .add(new Text(amount).setFont(bold()).setFontColor(valueColor))
                 .setFontSize(15)
-                .setFont(bold())
-                .setFontColor(valueColor)
-                .setMargin(0));
+                .setMargin(0);
 
+        cell.add(valueParagraph);
         return cell;
     }
 
@@ -250,14 +296,19 @@ public class PDFHelperUtils {
                 .setBorderBottom(new SolidBorder(GREY_100, 0.5f));
     }
 
-    public static Cell amountCell(String text, boolean isIncome) {
+    public static Cell amountCell(String symbol, String amount, boolean isIncome) {
+        Color color = isIncome ? GREEN : RED;
+
+        Paragraph p = new Paragraph()
+                .add(new Text(isIncome ? "+" : "-")).setFont(notoRegular()).setFontColor(color)
+                .add(new Text(symbol + " ").setFont(notoBold()).setFontColor(color))
+                .add(new Text(amount).setFont(bold()).setFontColor(color))
+                .setTextAlignment(TextAlignment.RIGHT)
+                .setMargin(0);
+
         return new Cell()
-                .add(new Paragraph(text)
-                        .setFontSize(10)
-                        .setFont(bold())
-                        .setFontColor(isIncome ? GREEN : RED)
-                        .setTextAlignment(TextAlignment.RIGHT)
-                        .setMargin(0))
+                .add(p)
+                .setFontSize(10)
                 .setPadding(8)
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(GREY_100, 0.5f));
@@ -304,7 +355,7 @@ public class PDFHelperUtils {
 
         // Beige page background — drawn on every page via event handler
         pdf.addEventHandler(
-                com.itextpdf.kernel.events.PdfDocumentEvent.START_PAGE,
+                PdfDocumentEvent.START_PAGE,
                 new BackgroundEventHandler(BG_BEIGE)
         );
 
@@ -316,7 +367,7 @@ public class PDFHelperUtils {
         return date != null ? date.format(DateTimeFormatter.ofPattern("dd MMM yyyy")) : "—";
     }
 
-    public static String formatAmount(java.math.BigDecimal amount, boolean isIncome) {
-        return (isIncome ? "+" : "-") + "$" + amount.toPlainString();
+    public static String formatAmount(BigDecimal amount, boolean isIncome, String currencySymbol) {
+       return (isIncome ? "+" : "-") + currencySymbol + amount.toPlainString();
     }
 }

@@ -3,8 +3,8 @@ package com.finpulse.service;
 import com.finpulse.entity.Transaction;
 import com.finpulse.entity.User;
 import com.finpulse.enums.TransactionType;
+import com.finpulse.util.CurrencyUtils;
 import com.finpulse.util.pdf.PDFHelperUtils;
-import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Div;
 import com.itextpdf.layout.element.Table;
@@ -28,6 +28,8 @@ public class TransactionPdfService {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document doc = PDFHelperUtils.createDocument(out);
+
+        String currencySymbol = CurrencyUtils.getCurrencySymbol(user.getCurrency());
 
         // ── Brand mark ──
         doc.add(PDFHelperUtils.brandMark());
@@ -60,9 +62,9 @@ public class TransactionPdfService {
         Div summaryCard = PDFHelperUtils.contentCard();
         summaryCard.add(PDFHelperUtils.sectionHeading("Summary"));
         summaryCard.add(PDFHelperUtils.summaryRow(
-                "Total Income",   "+$" + totalIncome.toPlainString(),
-                "Total Expenses", "-$" + totalExpense.toPlainString(),
-                "Net",            (net.signum() >= 0 ? "+$" : "-$") + net.abs().toPlainString(),
+                "Total Income",   currencySymbol, totalIncome.toPlainString(),
+                "Total Expenses", currencySymbol, totalExpense.toPlainString(),
+                "Net",            currencySymbol, net.abs().toPlainString(),
                 net.signum() >= 0
         ));
         doc.add(summaryCard);
@@ -94,7 +96,8 @@ public class TransactionPdfService {
                         PDFHelperUtils.formatDate(t.getTransactionDate())
                 ));
                 table.addCell(PDFHelperUtils.amountCell(
-                        PDFHelperUtils.formatAmount(t.getAmount(), isIncome),
+                        currencySymbol,
+                        String.valueOf(t.getAmount()),
                         isIncome
                 ));
             }

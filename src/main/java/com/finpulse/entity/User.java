@@ -57,6 +57,9 @@ public class User {
     @Column(length = 512)
     private String avatarUrl;
 
+    @Column(nullable = false)
+    private String currency = "USD";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AuthProvider authProvider;
