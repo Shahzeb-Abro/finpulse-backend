@@ -162,6 +162,12 @@ public class SecurityConfig {
                                 "/oauth2/**",             // Google OAuth2 flow
                                 "/actuator/health"        // health check for load balancers
                         ).permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs"
+                        ).permitAll()
 
                         // Allow preflight CORS requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
