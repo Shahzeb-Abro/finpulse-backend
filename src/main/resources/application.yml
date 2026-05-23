@@ -21,3 +21,12 @@ app:
     url: http://localhost:5173
   backend:
     url: http://localhost:8383
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false
