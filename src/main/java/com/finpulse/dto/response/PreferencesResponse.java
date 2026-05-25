@@ -11,4 +11,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PreferencesResponse {
     private String currency;
+    private String dateFormat;
 }
