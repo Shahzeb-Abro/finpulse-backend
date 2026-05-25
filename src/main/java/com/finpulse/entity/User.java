@@ -60,6 +60,9 @@ public class User {
     @Column(nullable = false)
     private String currency = "USD";
 
+    @Column(nullable = false)
+    private String dateFormat = "DD MMM YYYY";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AuthProvider authProvider;

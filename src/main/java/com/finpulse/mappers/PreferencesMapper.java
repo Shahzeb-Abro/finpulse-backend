@@ -12,6 +12,7 @@ public class PreferencesMapper {
 
         PreferencesResponse dto = new PreferencesResponse();
         dto.setCurrency(domain.getCurrency());
+        dto.setDateFormat(domain.getDateFormat());
         return dto;
     }
 

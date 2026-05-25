@@ -31,6 +31,11 @@ public class UserService {
             userRepository.save(loggedInUser);
         }
 
+        if (preferences.dateFormat() != null) {
+            loggedInUser.setDateFormat(preferences.dateFormat());
+            userRepository.save(loggedInUser);
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Preferences updated successfully"));
     }
 }
