@@ -5,13 +5,16 @@ import com.finpulse.dto.request.PotRequest;
 import com.finpulse.dto.request.SearchDto;
 import com.finpulse.dto.response.ApiResponse;
 import com.finpulse.dto.response.PagedResponse;
+import com.finpulse.dto.response.PotDetailsResponse;
 import com.finpulse.dto.response.PotResponse;
 import com.finpulse.entity.Lookup;
 import com.finpulse.entity.Pot;
+import com.finpulse.entity.PotTransaction;
 import com.finpulse.entity.User;
 import com.finpulse.mappers.PotMapper;
 import com.finpulse.repository.LookupRepository;
 import com.finpulse.repository.PotRepository;
+import com.finpulse.repository.PotTransactionRepository;
 import com.finpulse.specification.GenericSpecificationBuilder;
 import com.finpulse.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +37,10 @@ public class PotService {
     private final LookupRepository lookupRepository;
     private final SecurityUtils securityUtils;
     private final PotMapper potMapper;
+    private final PotTransactionRepository potTransactionRepository;
 
     public ResponseEntity<ApiResponse<PagedResponse<PotResponse>>> getAllPots(SearchDto searchDto) {
-       Pageable pageable = GenericSpecificationBuilder.buildPageable(searchDto.getPage(), searchDto.getPageSize(), searchDto.getSort());
+        Pageable pageable = GenericSpecificationBuilder.buildPageable(searchDto.getPage(), searchDto.getPageSize(), searchDto.getSort());
 
         Specification<Pot> spec = GenericSpecificationBuilder.build(
                 Pot.class,
@@ -107,21 +111,7 @@ public class PotService {
 
         return ResponseEntity.ok().body(ApiResponse.success("Pot updated successfully",
                 potMapper.mapPotDomainToResponseDto(existingPot)
-                ));
-    }
-
-    public ResponseEntity<ApiResponse<PotResponse>> getPotById(Long potId) {
-        User loggedInUser = securityUtils.getCurrentUser();
-
-        Pot pot = potRepository.findByIdAndUser(potId, loggedInUser);
-
-        if (pot == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("No pot with given identifier"));
-        }
-
-        return ResponseEntity.ok().body(ApiResponse.success("Pot found",
-              potMapper.mapPotDomainToResponseDto(pot)
-                ));
+        ));
     }
 
     public ResponseEntity<ApiResponse<Void>> deletePotById(Long potId) {
@@ -161,9 +151,21 @@ public class PotService {
         pot.setTotalSaved(prevSavedAmount.add(dto.getAmount()));
         potRepository.save(pot);
 
+        // Save the transaction in Pot Transaction table
+        PotTransaction potTransaction = PotTransaction.builder()
+                .amount(dto.getAmount())
+                .pot(pot)
+                .isAddition(Boolean.TRUE)
+                .isWithdrawal(Boolean.FALSE)
+                .user(loggedInUser)
+                .activeFlag(Boolean.TRUE)
+                .build();
+
+        potTransactionRepository.save(potTransaction);
+
         return ResponseEntity.ok().body(ApiResponse.success("Amount added successfully",
-               potMapper.mapPotDomainToResponseDto(pot)
-                ));
+                potMapper.mapPotDomainToResponseDto(pot)
+        ));
     }
 
     public ResponseEntity<ApiResponse<PotResponse>> withdrawMoneyFromPot(Long potId, AddWithdrawMoneyPotRequest dto) {
@@ -182,9 +184,39 @@ public class PotService {
         pot.setTotalSaved(savedAmount.subtract(dto.getAmount()));
         potRepository.save(pot);
 
+        // Save the transaction in Pot Transaction table
+        PotTransaction potTransaction = PotTransaction.builder()
+                .amount(dto.getAmount())
+                .pot(pot)
+                .isAddition(Boolean.FALSE)
+                .isWithdrawal(Boolean.TRUE)
+                .user(loggedInUser)
+                .activeFlag(Boolean.TRUE)
+                .build();
+
+        potTransactionRepository.save(potTransaction);
+
         return ResponseEntity.ok().body(ApiResponse.success("Amount withdrawn successfully",
-              potMapper.mapPotDomainToResponseDto(pot)
-                ));
+                potMapper.mapPotDomainToResponseDto(pot)
+        ));
+    }
+
+
+    public ResponseEntity<ApiResponse<PotDetailsResponse>> getPotDetails(Long potId) {
+        User loggedInUser = securityUtils.getCurrentUser();
+        Pot pot = potRepository.findByIdAndUser(potId, loggedInUser);
+
+        if (pot == null) {
+            return ResponseEntity.status(404).body(ApiResponse.error("No pot found"));
+        }
+
+        List<PotTransaction> potTransactions = potTransactionRepository.findByPotOrderByCreatedDateDesc(pot);
+
+        PotDetailsResponse potDetailsResponse = new PotDetailsResponse();
+        potDetailsResponse.setPotResponse(potMapper.mapPotDomainToResponseDto(pot));
+        potDetailsResponse.setPotTransactions(potTransactions);
+
+        return ResponseEntity.ok().body(ApiResponse.success("Pot details fetched successfully", potDetailsResponse));
     }
 }
 

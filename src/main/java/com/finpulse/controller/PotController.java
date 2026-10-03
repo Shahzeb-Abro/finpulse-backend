@@ -6,6 +6,7 @@ import com.finpulse.dto.request.PotRequest;
 import com.finpulse.dto.request.SearchDto;
 import com.finpulse.dto.response.ApiResponse;
 import com.finpulse.dto.response.PagedResponse;
+import com.finpulse.dto.response.PotDetailsResponse;
 import com.finpulse.dto.response.PotResponse;
 import com.finpulse.service.PotService;
 import jakarta.validation.Valid;
@@ -33,12 +34,7 @@ public class PotController {
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE_SIZE) int pageSize,
             @RequestParam(defaultValue = "createdDate,desc") String sort
     ) {
-        return potService.getAllPots(new SearchDto(search, wildSearch, sort, page,pageSize));
-    }
-
-    @GetMapping("/{potId}")
-    public ResponseEntity<ApiResponse<PotResponse>> getPotById(@PathVariable("potId") Long potId) {
-        return potService.getPotById(potId);
+        return potService.getAllPots(new SearchDto(search, wildSearch, sort, page, pageSize));
     }
 
     @PostMapping("/create")
@@ -64,6 +60,11 @@ public class PotController {
     @PutMapping("{potId}/withdraw-money")
     public ResponseEntity<ApiResponse<PotResponse>> withdrawMoneyFromPot(@PathVariable("potId") Long potId, @RequestBody AddWithdrawMoneyPotRequest dto) {
         return potService.withdrawMoneyFromPot(potId, dto);
+    }
+
+    @GetMapping("/{potId}")
+    public ResponseEntity<ApiResponse<PotDetailsResponse>> getPotDetails(@PathVariable("potId") Long potId) {
+        return potService.getPotDetails(potId);
     }
 
     @GetMapping("/generate-key")
